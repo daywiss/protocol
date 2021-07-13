@@ -117,6 +117,18 @@ export default (config: Config, appState: Dependencies) => {
       })
     );
   }
+  async function updateGlobalTvlHistory() {
+    const latest = getLatestTvlTable();
+    const history = getTvlHistoryTable();
+    const stat = await latest.getGlobal();
+    assert(uma.utils.exists(stat.timestamp), "stats require timestamp globally");
+    assert(uma.utils.exists(stat.value), "No lvm value globally");
+    if (await history.hasGlobal(stat.timestamp)) return stat;
+    return history.createGlobal({
+      value: stat.value,
+      timestamp: stat.timestamp,
+    });
+  }
   async function updateGlobalTvl() {
     const value = await queries.totalTvl(currency);
     const update = {
@@ -136,6 +148,9 @@ export default (config: Config, appState: Dependencies) => {
     });
     await updateGlobalTvl().catch((err) => {
       console.error("Error updating global TVL: " + err.message);
+    });
+    await updateGlobalTvlHistory().catch((err) => {
+      console.error("Error updating global TVL History: " + err.message);
     });
     await updateAllTvm(addresses).then((results) => {
       results.forEach((result) => {
